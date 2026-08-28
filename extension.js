@@ -34,28 +34,21 @@ async function activate(context) {
   );
   statusBarItem.text = '$(git-commit) AI Commit';
   statusBarItem.tooltip = 'Git AI Auto Commit';
-  statusBarItem.command = 'gitAiAutoCommit.generateAndCommit';
+  statusBarItem.command = 'gitAiAutoCommit.generateToScm';
   statusBarItem.show();
   context.subscriptions.push(statusBarItem);
 
-  // ─── 命令：AI 生成提交消息并提交 ───
+  // ─── 命令：AI 生成提交消息并直接提交 ───
   context.subscriptions.push(
     vscode.commands.registerCommand('gitAiAutoCommit.generateAndCommit', async () => {
       await runGenerateAndCommit(gitOps, aiClient, config, { autoCommit: true });
     })
   );
 
-  // ─── 命令：仅 AI 生成提交消息（不提交） ───
-  context.subscriptions.push(
-    vscode.commands.registerCommand('gitAiAutoCommit.generateOnly', async () => {
-      await runGenerateAndCommit(gitOps, aiClient, config, { autoCommit: false });
-    })
-  );
-
-  // ─── 命令：AI 生成提交消息写入 SCM 输入框 ───
+  // ─── 命令：AI 生成提交消息到 SCM 输入框 ───
   context.subscriptions.push(
     vscode.commands.registerCommand('gitAiAutoCommit.generateToScm', async () => {
-      await runGenerateToScm(gitOps, aiClient, config);
+      await runGenerateAndCommit(gitOps, aiClient, config, { autoCommit: false });
     })
   );
 
@@ -75,7 +68,45 @@ async function activate(context) {
 }
 
 /**
- * 核心流程：获取 diff → AI 生成消息 → 可选提交
+ * 写入 VS Code 内置 Git 扩展的 SCM 输入框
+ * @param {string} message - 要写入的提交消息
+ * @returns {Promise<boolean>} 是否成功
+ */
+async function writeToScmInputBox(message) {
+  try {
+    const gitExtension = vscode.extensions.getExtension('vscode.git');
+    if (!gitExtension) return false;
+
+    // 确保内置 Git 扩展已激活
+    if (!gitExtension.isActive) {
+      await gitExtension.activate();
+    }
+
+    // exports 是 GitExtension 对象，需要调用 getAPI(1) 获取 API
+    const gitExt = gitExtension.exports;
+    if (!gitExt || !gitExt.getAPI) return false;
+
+    const gitApi = gitExt.getAPI(1);
+    if (!gitApi || !gitApi.repositories || gitApi.repositories.length === 0) {
+      return false;
+    }
+
+    // 取第一个仓库的输入框（当前工作区的 Git 仓库）
+    const repo = gitApi.repositories[0];
+    if (repo && repo.inputBox) {
+      repo.inputBox.value = message;
+      return true;
+    }
+    return false;
+  } catch (err) {
+    console.error('写入 SCM 输入框失败:', err);
+    return false;
+  }
+}
+
+/**
+ * 核心流程：获取 diff → AI 生成消息 → 直接提交或写入 SCM 输入框
+ * @param {boolean} options.autoCommit - true: 直接提交; false: 写入 SCM 输入框供用户编辑
  */
 async function runGenerateAndCommit(gitOps, aiClient, config, options) {
   const { autoCommit } = options;
@@ -140,6 +171,7 @@ async function runGenerateAndCommit(gitOps, aiClient, config, options) {
           console.log('AI 生成的 commit message:', message);
 
           if (autoCommit) {
+            // 直接提交
             const success = await gitOps.commit(root, message);
             if (success) {
               if (showNotifications) {
@@ -149,118 +181,15 @@ async function runGenerateAndCommit(gitOps, aiClient, config, options) {
               vscode.window.showErrorMessage('git commit 失败');
             }
           } else {
-            const edited = await vscode.window.showInputBox({
-              prompt: 'AI 生成的提交消息（可编辑后确认）',
-              value: message,
-              placeHolder: '输入提交消息',
-            });
-            if (edited) {
-              const success = await gitOps.commit(root, edited);
-              if (success) {
-                if (showNotifications) {
-                  vscode.window.showInformationMessage(`提交成功: ${edited}`);
-                }
-              } else {
-                vscode.window.showErrorMessage('git commit 失败');
+            // 写入 VS Code 内置 Git 的 SCM 输入框
+            const written = await writeToScmInputBox(message);
+            if (written) {
+              if (showNotifications) {
+                vscode.window.showInformationMessage('已生成提交消息，请在源代码管理面板中检查并提交');
               }
-            }
-          }
-        } catch (err) {
-          vscode.window.showErrorMessage(`AI 生成失败: ${err.message}`);
-          console.error(err);
-        }
-      }
-    );
-  } catch (err) {
-    vscode.window.showErrorMessage(`操作失败: ${err.message}`);
-    console.error(err);
-  }
-}
-
-/**
- * 核心流程：获取 diff → AI 生成消息 → 写入 VS Code SCM 输入框
- */
-async function runGenerateToScm(gitOps, aiClient, config) {
-  const showNotifications = await config.get('showNotifications');
-
-  try {
-    const root = await gitOps.getRoot();
-    if (!root) {
-      vscode.window.showErrorMessage('当前工作区不是 Git 仓库');
-      return;
-    }
-
-    const hasStaged = await gitOps.hasStagedChanges(root);
-    const hasUnstaged = await gitOps.hasUnstagedChanges(root);
-    const autoStageAll = await config.get('autoStageAll');
-
-    if (!hasStaged && !hasUnstaged) {
-      vscode.window.showInformationMessage('没有检测到任何代码变更');
-      return;
-    }
-
-    if (!hasStaged && hasUnstaged) {
-      if (autoStageAll) {
-        const success = await gitOps.stageAll(root);
-        if (!success) {
-          vscode.window.showErrorMessage('git add -A 失败');
-          return;
-        }
-      } else {
-        const choice = await vscode.window.showWarningMessage(
-          '没有已暂存的变更。是否暂存所有变更？',
-          '暂存全部',
-          '取消'
-        );
-        if (choice !== '暂存全部') return;
-        const success = await gitOps.stageAll(root);
-        if (!success) {
-          vscode.window.showErrorMessage('git add -A 失败');
-          return;
-        }
-      }
-    }
-
-    const maxDiffLines = (await config.get('maxDiffLines')) || 500;
-    const diff = await gitOps.getStagedDiff(root, maxDiffLines);
-    if (!diff) {
-      vscode.window.showInformationMessage('已暂存的内容为空');
-      return;
-    }
-
-    const files = await gitOps.getChangedFiles(root);
-
-    await vscode.window.withProgress(
-      {
-        location: vscode.ProgressLocation.Notification,
-        title: 'AI 正在生成提交消息...',
-        cancellable: false,
-      },
-      async () => {
-        try {
-          const message = await aiClient.generateCommitMessage(diff, files);
-          console.log('AI 生成的 commit message:', message);
-
-          if (vscode.scm && vscode.scm.inputBox) {
-            vscode.scm.inputBox.value = message;
-            if (showNotifications) {
-              vscode.window.showInformationMessage('已生成提交消息，请在源代码管理面板中检查并提交');
-            }
-          } else {
-            const edited = await vscode.window.showInputBox({
-              prompt: 'AI 生成的提交消息（可编辑后确认提交）',
-              value: message,
-              placeHolder: '输入提交消息',
-            });
-            if (edited) {
-              const success = await gitOps.commit(root, edited);
-              if (success) {
-                if (showNotifications) {
-                  vscode.window.showInformationMessage(`提交成功: ${edited}`);
-                }
-              } else {
-                vscode.window.showErrorMessage('git commit 失败');
-              }
+            } else {
+              // SCM 不可用时只提示用户，绝不自动提交
+              vscode.window.showWarningMessage('无法写入 SCM 输入框。生成的消息：\n' + message);
             }
           }
         } catch (err) {

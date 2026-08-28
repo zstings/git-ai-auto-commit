@@ -33,18 +33,22 @@
   "activationEvents": [
     "*"
   ],
+  "extensionDependencies": [
+    "vscode.git"
+  ],
   "main": "./extension.js",
   "contributes": {
     "commands": [
       {
         "command": "gitAiAutoCommit.generateAndCommit",
-        "title": "AI 生成提交消息并提交",
+        "title": "AI 生成提交消息并直接提交",
         "category": "Git AI Auto Commit"
       },
       {
-        "command": "gitAiAutoCommit.generateOnly",
-        "title": "仅 AI 生成提交消息（不提交）",
-        "category": "Git AI Auto Commit"
+        "command": "gitAiAutoCommit.generateToScm",
+        "title": "AI 生成提交消息到输入框",
+        "category": "Git AI Auto Commit",
+        "icon": "$(sparkle)"
       },
       {
         "command": "gitAiAutoCommit.openConfig",
@@ -56,12 +60,6 @@
         "title": "打开配置页面",
         "category": "Git AI Auto Commit",
         "icon": "$(settings-gear)"
-      },
-      {
-        "command": "gitAiAutoCommit.generateToScm",
-        "title": "AI 生成提交消息到输入框",
-        "category": "Git AI Auto Commit",
-        "icon": "$(sparkle)"
       }
     ],
     "viewsContainers": {
