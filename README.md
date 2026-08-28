@@ -64,8 +64,8 @@
 
 | 配置项 | 默认值 | 说明 |
 |--------|--------|------|
-| `commitStyle` | `"conventional"` | 提交风格：`conventional`（Conventional Commits）/ `simple`（简洁） |
 | `language` | `"zh"` | 提交消息语言：`zh`（中文）/ `en`（英文） |
+| `commitStyleRule` | Conventional Commits 规则 | 提交规则，AI 按此规则生成 commit message，可在配置页面自由编辑 |
 | `maxDiffLines` | `500` | 发送给 AI 的最大 diff 行数（超出截断） |
 | `autoStageAll` | `false` | 提交前自动执行 `git add -A` |
 | `showNotifications` | `true` | 显示操作完成通知 |
@@ -76,7 +76,6 @@
 {
   "gitAiAutoCommit.apiProvider": "deepseek",
   "gitAiAutoCommit.apiKey": "sk-xxxxxxxxxxxx",
-  "gitAiAutoCommit.commitStyle": "conventional",
   "gitAiAutoCommit.language": "zh"
 }
 ```
