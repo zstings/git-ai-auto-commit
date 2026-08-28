@@ -101,37 +101,20 @@
     "configuration": {
       "title": "Git AI Auto Commit",
       "properties": {
-        "gitAiAutoCommit.apiProvider": {
-          "type": "string",
-          "enum": [
-            "openai",
-            "deepseek",
-            "claude",
-            "custom"
-          ],
-          "enumDescriptions": [
-            "OpenAI 兼容接口（支持 GPT-4o 等模型）",
-            "DeepSeek 接口",
-            "Anthropic Claude 接口",
-            "自定义 OpenAI 兼容接口（需填写 baseUrl 和 apiKey）"
-          ],
-          "default": "deepseek",
-          "description": "AI 服务提供商"
-        },
         "gitAiAutoCommit.apiKey": {
           "type": "string",
           "default": "",
-          "description": "AI 服务的 API Key"
+          "description": "AI 服务的 API Key（建议在配置页面中管理）"
         },
         "gitAiAutoCommit.baseUrl": {
           "type": "string",
           "default": "",
-          "description": "自定义 API 基础地址（留空则使用对应 provider 的默认地址）"
+          "description": "API 基础地址（建议在配置页面中管理）"
         },
         "gitAiAutoCommit.model": {
           "type": "string",
           "default": "",
-          "description": "AI 模型名称（留空则使用对应 provider 的默认模型）"
+          "description": "AI 模型名称（建议在配置页面中管理）"
         },
         "gitAiAutoCommit.commitStyle": {
           "type": "string",
