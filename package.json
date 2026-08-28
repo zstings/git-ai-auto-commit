@@ -1,0 +1,151 @@
+{
+  "name": "git-ai-auto-commit",
+  "displayName": "Git AI Auto Commit",
+  "description": "使用 AI 自动生成 Git 提交消息并提交",
+  "version": "0.1.0",
+  "publisher": "zstings",
+  "bugs": {
+    "url": "https://github.com/zstings/git-ai-auto-commit/issues"
+  },
+  "engines": {
+    "vscode": "^1.94.0"
+  },
+  "icon": "logo.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zstings/git-ai-auto-commit.git"
+  },
+  "categories": [
+    "AI",
+    "SCM Providers",
+    "Other"
+  ],
+  "keywords": [
+    "git",
+    "commit",
+    "ai",
+    "auto-commit",
+    "openai",
+    "claude",
+    "deepseek",
+    "conventional commits"
+  ],
+  "activationEvents": [
+    "*"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "gitAiAutoCommit.generateAndCommit",
+        "title": "AI 生成提交消息并提交",
+        "category": "Git AI Auto Commit"
+      },
+      {
+        "command": "gitAiAutoCommit.generateOnly",
+        "title": "仅 AI 生成提交消息（不提交）",
+        "category": "Git AI Auto Commit"
+      },
+      {
+        "command": "gitAiAutoCommit.openConfig",
+        "title": "打开配置",
+        "category": "Git AI Auto Commit"
+      }
+    ],
+    "configuration": {
+      "title": "Git AI Auto Commit",
+      "properties": {
+        "gitAiAutoCommit.apiProvider": {
+          "type": "string",
+          "enum": [
+            "openai",
+            "deepseek",
+            "claude",
+            "custom"
+          ],
+          "enumDescriptions": [
+            "OpenAI 兼容接口（支持 GPT-4o 等模型）",
+            "DeepSeek 接口",
+            "Anthropic Claude 接口",
+            "自定义 OpenAI 兼容接口（需填写 baseUrl 和 apiKey）"
+          ],
+          "default": "deepseek",
+          "description": "AI 服务提供商"
+        },
+        "gitAiAutoCommit.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "AI 服务的 API Key"
+        },
+        "gitAiAutoCommit.baseUrl": {
+          "type": "string",
+          "default": "",
+          "description": "自定义 API 基础地址（留空则使用对应 provider 的默认地址）"
+        },
+        "gitAiAutoCommit.model": {
+          "type": "string",
+          "default": "",
+          "description": "AI 模型名称（留空则使用对应 provider 的默认模型）"
+        },
+        "gitAiAutoCommit.commitStyle": {
+          "type": "string",
+          "enum": [
+            "conventional",
+            "simple"
+          ],
+          "enumDescriptions": [
+            "Conventional Commits 风格（如 feat: / fix: / docs: 等）",
+            "简洁风格（直接描述变更内容）"
+          ],
+          "default": "conventional",
+          "description": "提交消息风格"
+        },
+        "gitAiAutoCommit.language": {
+          "type": "string",
+          "enum": [
+            "zh",
+            "en"
+          ],
+          "enumDescriptions": [
+            "中文提交消息",
+            "英文提交消息"
+          ],
+          "default": "zh",
+          "description": "提交消息语言"
+        },
+        "gitAiAutoCommit.maxDiffLines": {
+          "type": "number",
+          "default": 500,
+          "description": "发送给 AI 的最大 diff 行数（超出将截断）"
+        },
+        "gitAiAutoCommit.autoStageAll": {
+          "type": "boolean",
+          "default": false,
+          "description": "提交前自动执行 git add -A（暂存所有变更）"
+        },
+        "gitAiAutoCommit.showNotifications": {
+          "type": "boolean",
+          "default": true,
+          "description": "显示操作完成的通知"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "pretest": "pnpm run lint",
+    "test": "node test/run-tests.js",
+    "build": "pnpm vsce package --no-dependencies"
+  },
+  "devDependencies": {
+    "@types/vscode": "1.94.0",
+    "@vscode/vsce": "^3.7.1",
+    "eslint": "^9.18.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@vscode/vsce-sign",
+      "keytar"
+    ]
+  }
+}
