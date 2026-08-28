@@ -68,40 +68,43 @@ async function activate(context) {
 }
 
 /**
+ * 获取 VS Code 内置 Git 扩展的 API
+ * @returns {Promise<object|null>}
+ */
+async function getGitApi() {
+  try {
+    const gitExtension = vscode.extensions.getExtension('vscode.git');
+    if (!gitExtension) return null;
+    if (!gitExtension.isActive) {
+      await gitExtension.activate();
+    }
+    const gitExt = gitExtension.exports;
+    if (!gitExt || !gitExt.getAPI) return null;
+    const gitApi = gitExt.getAPI(1);
+    if (!gitApi || !gitApi.repositories || gitApi.repositories.length === 0) {
+      return null;
+    }
+    return gitApi;
+  } catch (err) {
+    console.error('获取 Git API 失败:', err);
+    return null;
+  }
+}
+
+/**
  * 写入 VS Code 内置 Git 扩展的 SCM 输入框
  * @param {string} message - 要写入的提交消息
  * @returns {Promise<boolean>} 是否成功
  */
 async function writeToScmInputBox(message) {
-  try {
-    const gitExtension = vscode.extensions.getExtension('vscode.git');
-    if (!gitExtension) return false;
-
-    // 确保内置 Git 扩展已激活
-    if (!gitExtension.isActive) {
-      await gitExtension.activate();
-    }
-
-    // exports 是 GitExtension 对象，需要调用 getAPI(1) 获取 API
-    const gitExt = gitExtension.exports;
-    if (!gitExt || !gitExt.getAPI) return false;
-
-    const gitApi = gitExt.getAPI(1);
-    if (!gitApi || !gitApi.repositories || gitApi.repositories.length === 0) {
-      return false;
-    }
-
-    // 取第一个仓库的输入框（当前工作区的 Git 仓库）
-    const repo = gitApi.repositories[0];
-    if (repo && repo.inputBox) {
-      repo.inputBox.value = message;
-      return true;
-    }
-    return false;
-  } catch (err) {
-    console.error('写入 SCM 输入框失败:', err);
-    return false;
+  const gitApi = await getGitApi();
+  if (!gitApi) return false;
+  const repo = gitApi.repositories[0];
+  if (repo && repo.inputBox) {
+    repo.inputBox.value = message;
+    return true;
   }
+  return false;
 }
 
 /**
@@ -167,11 +170,10 @@ async function runGenerateAndCommit(gitOps, aiClient, config, options) {
       },
       async () => {
         try {
-          const message = await aiClient.generateCommitMessage(diff, files);
-          console.log('AI 生成的 commit message:', message);
-
           if (autoCommit) {
-            // 直接提交
+            // 直接提交（非流式）
+            const message = await aiClient.generateCommitMessage(diff, files);
+            console.log('AI 生成的 commit message:', message);
             const success = await gitOps.commit(root, message);
             if (success) {
               if (showNotifications) {
@@ -181,15 +183,34 @@ async function runGenerateAndCommit(gitOps, aiClient, config, options) {
               vscode.window.showErrorMessage('git commit 失败');
             }
           } else {
-            // 写入 VS Code 内置 Git 的 SCM 输入框
-            const written = await writeToScmInputBox(message);
-            if (written) {
-              if (showNotifications) {
-                vscode.window.showInformationMessage('已生成提交消息，请在源代码管理面板中检查并提交');
-              }
-            } else {
-              // SCM 不可用时只提示用户，绝不自动提交
-              vscode.window.showWarningMessage('无法写入 SCM 输入框。生成的消息：\n' + message);
+            // 流式写入 SCM 输入框
+            const gitApi = await getGitApi();
+            if (!gitApi) {
+              vscode.window.showWarningMessage('无法写入 SCM 输入框，请确保已打开源代码管理面板');
+              return;
+            }
+            const repo = gitApi.repositories[0];
+            if (!repo || !repo.inputBox) {
+              vscode.window.showWarningMessage('无法写入 SCM 输入框，请确保已打开源代码管理面板');
+              return;
+            }
+
+            // 先清空输入框
+            repo.inputBox.value = '';
+            let accumulated = '';
+
+            const message = await aiClient.generateCommitMessageStream(diff, files, (chunk) => {
+              accumulated += chunk;
+              // 实时写入输入框，流式显示
+              repo.inputBox.value = accumulated;
+            });
+
+            // 流结束后用清理后的消息替换
+            repo.inputBox.value = message;
+            console.log('AI 生成的 commit message:', message);
+
+            if (showNotifications) {
+              vscode.window.showInformationMessage('已生成提交消息，请在源代码管理面板中检查并提交');
             }
           }
         } catch (err) {
