@@ -67,7 +67,7 @@
         {
           "id": "gitAiAutoCommit-sidebar",
           "title": "Git AI Auto Commit",
-          "icon": "$(comment-discussion)"
+          "icon": "$(git-commit)"
         }
       ]
     },
@@ -134,7 +134,7 @@
         },
         "gitAiAutoCommit.maxDiffLines": {
           "type": "number",
-          "default": 500,
+          "default": 1000,
           "description": "发送给 AI 的最大 diff 行数（超出将截断）"
         },
         "gitAiAutoCommit.autoStageAll": {
