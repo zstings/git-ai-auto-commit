@@ -50,8 +50,54 @@
         "command": "gitAiAutoCommit.openConfig",
         "title": "打开配置",
         "category": "Git AI Auto Commit"
+      },
+      {
+        "command": "gitAiAutoCommit.openConfigPage",
+        "title": "打开配置页面",
+        "category": "Git AI Auto Commit",
+        "icon": "$(settings-gear)"
+      },
+      {
+        "command": "gitAiAutoCommit.generateToScm",
+        "title": "AI 生成提交消息到输入框",
+        "category": "Git AI Auto Commit",
+        "icon": "$(sparkle)"
       }
     ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "gitAiAutoCommit-sidebar",
+          "title": "Git AI Auto Commit",
+          "icon": "$(comment-discussion)"
+        }
+      ]
+    },
+    "views": {
+      "gitAiAutoCommit-sidebar": [
+        {
+          "type": "webview",
+          "id": "gitAiAutoCommit.configView",
+          "name": "配置"
+        }
+      ]
+    },
+    "menus": {
+      "scm/title": [
+        {
+          "command": "gitAiAutoCommit.generateToScm",
+          "group": "navigation",
+          "when": "scmProvider == git"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "gitAiAutoCommit.openConfigPage",
+          "group": "navigation",
+          "when": "view == gitAiAutoCommit.configView"
+        }
+      ]
+    },
     "configuration": {
       "title": "Git AI Auto Commit",
       "properties": {
