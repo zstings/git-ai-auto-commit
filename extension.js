@@ -198,11 +198,20 @@ async function runGenerateAndCommit(gitOps, aiClient, config, options) {
             // 先清空输入框
             repo.inputBox.value = '';
             let accumulated = '';
+            let pendingFlush = false;
+
+            const flushToInputBox = () => {
+              pendingFlush = false;
+              repo.inputBox.value = accumulated;
+            };
 
             const message = await aiClient.generateCommitMessageStream(diff, files, (chunk) => {
               accumulated += chunk;
-              // 实时写入输入框，流式显示
-              repo.inputBox.value = accumulated;
+              // 异步节流写入，让 VS Code 有机会逐字渲染
+              if (!pendingFlush) {
+                pendingFlush = true;
+                setTimeout(flushToInputBox, 16); // ~60fps
+              }
             });
 
             // 流结束后用清理后的消息替换
