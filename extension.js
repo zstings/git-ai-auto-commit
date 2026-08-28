@@ -153,7 +153,7 @@ async function runGenerateAndCommit(gitOps, aiClient, config, options) {
       }
     }
 
-    const maxDiffLines = (await config.get('maxDiffLines')) || 500;
+    const maxDiffLines = (await config.get('maxDiffLines')) || 1000;
     const diff = await gitOps.getStagedDiff(root, maxDiffLines);
     if (!diff) {
       vscode.window.showInformationMessage('已暂存的内容为空');

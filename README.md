@@ -74,7 +74,7 @@
 |--------|--------|------|
 | `language` | `"zh"` | 提交消息语言：`zh`（中文）/ `en`（英文） |
 | `commitStyleRule` | Conventional Commits 规则 | 提交规则，AI 按此规则生成 commit message，可在配置面板自由编辑 |
-| `maxDiffLines` | `500` | 发送给 AI 的最大 diff 行数（超出截断） |
+| `maxDiffLines` | `1000` | 发送给 AI 的最大 diff 行数（超出截断） |
 | `autoStageAll` | `false` | 提交前自动执行 `git add -A` |
 | `showNotifications` | `true` | 显示操作完成通知 |
 
